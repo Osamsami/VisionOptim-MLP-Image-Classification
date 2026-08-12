@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Byte-compile sources
+        run: python -m py_compile src/mlp.py train.py app.py
+
+      - name: Generate a tiny synthetic dataset
+        run: |
+          python - <<'PY'
+          import os
+          import cv2
+          import numpy as np
+
+          rng = np.random.default_rng(0)
+          classes = ["classA", "classB", "classC"]
+          for split, count in [("seg_train", 12), ("seg_test", 4)]:
+              for cls in classes:
+                  out_dir = os.path.join("smoke_data", split, cls)
+                  os.makedirs(out_dir, exist_ok=True)
+                  for i in range(count):
+                      img = (rng.random((48, 48, 3)) * 255).astype(np.uint8)
+                      cv2.imwrite(os.path.join(out_dir, f"{i}.jpg"), img)
+          print("Synthetic smoke-test dataset ready under ./smoke_data")
+          PY
+
+      - name: Run train.py smoke test
+        run: |
+          python train.py \
+            --data-dir ./smoke_data \
+            --epochs 2 \
+            --hidden-size 8 \
+            --limit-per-class 12 \
+            --output models/smoke_test_weights.npz
+
+      - name: Verify saved weights load back
+        run: |
+          python - <<'PY'
+          from src.mlp import MLP
+
+          model, class_names, img_size = MLP.load("models/smoke_test_weights.npz")
+          assert class_names == ["classA", "classB", "classC"], class_names
+          assert img_size == 64
+          print("Weights load correctly:", class_names)
+          PY
