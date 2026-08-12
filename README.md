@@ -47,6 +47,79 @@ The dataset is **not included** in this repository (too large for version contro
 
 Each of the four training runs in the notebook reports **both** training accuracy and held-out test accuracy (evaluated on `seg_test`, which the model never trains on) every epoch, along with a final train-vs-test comparison chart and a per-class precision/recall/F1 report. Actual numbers depend on the local run (dataset sample size, `limit_per_class`, epoch count, etc.) — run the notebook or `train.py` to reproduce them for your own setup. Training/loss curves and comparison charts from prior runs are saved under [`VisionOptim/visuals/`](VisionOptim/visuals/).
 
+## Live Demo
+
+A hosted Streamlit demo is planned for a later phase — link will be added here once deployed. In the meantime, run it locally:
+
+```bash
+streamlit run app.py
+```
+
+## Project Structure
+
+```
+.
+├── VisionOptim/
+│   ├── notebook/VisionOptim.ipynb   # main experiment notebook
+│   └── visuals/                     # saved training/comparison plots
+├── src/
+│   └── mlp.py                       # shared from-scratch MLP implementation
+├── train.py                         # standalone training script -> models/*.npz
+├── app.py                           # Streamlit demo (upload image, get prediction)
+├── models/                          # saved model weights (git-ignored)
+├── requirements.txt
+├── Dockerfile
+└── .github/workflows/ci.yml         # installs deps, runs a training smoke test
+```
+
+## Installation & Usage
+
+### 1. Clone and install dependencies
+
+```bash
+git clone https://github.com/Osamsami/VisionOptim-MLP-Image-Classification.git
+cd VisionOptim-MLP-Image-Classification
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Get the dataset
+
+See [Dataset](#dataset) above. Set `VISIONOPTIM_DATA_PATH` if it's not at `./data`:
+
+```bash
+export VISIONOPTIM_DATA_PATH=/path/to/dataset
+```
+
+### 3a. Run the notebook
+
+```bash
+jupyter notebook VisionOptim/notebook/VisionOptim.ipynb
+```
+
+### 3b. Or train from the command line
+
+```bash
+python train.py --epochs 20 --hidden-size 128
+```
+
+This saves weights to `models/mlp_weights.npz`.
+
+### 4. Try the Streamlit demo
+
+```bash
+streamlit run app.py
+```
+
+Upload an image and get a predicted class from the trained model.
+
+### Docker
+
+```bash
+docker build -t visionoptim .
+docker run -p 8501:8501 -v /path/to/dataset:/app/data visionoptim
+```
+
 ## Tech Stack
 
 Python · NumPy · OpenCV · Matplotlib · Streamlit
